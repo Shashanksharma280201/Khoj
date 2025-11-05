@@ -73,73 +73,75 @@ const Home = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-20 md:pb-6">
+    <div className="space-y-4 sm:space-y-5 md:space-y-6 pb-20 md:pb-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4"
+      >
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Khoj - Lost & Found</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Browse and search for items in your campus</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+            Khoj - Lost & Found
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 flex items-center gap-2">
+            <span className="hidden sm:inline">🔍</span>
+            Browse and search for items in your campus
+          </p>
         </div>
-        <Button onClick={() => navigate('/post')} icon={Package} className="w-full sm:w-auto">
+        <Button
+          onClick={() => navigate('/post')}
+          icon={Package}
+          className="w-full sm:w-auto shadow-lg shadow-primary-200 hover:shadow-xl hover:shadow-primary-300"
+        >
           <span className="hidden sm:inline">Post New Item</span>
           <span className="sm:hidden">Post Item</span>
         </Button>
-      </div>
+      </motion.div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600">Total Items</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">{stats.total}</p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600">Found Items</p>
-              <p className="text-xl sm:text-2xl font-bold text-success-600 mt-0.5 sm:mt-1">{stats.found}</p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-success-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Search className="w-5 h-5 sm:w-6 sm:h-6 text-success-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600">Lost Items</p>
-              <p className="text-xl sm:text-2xl font-bold text-danger-600 mt-0.5 sm:mt-1">{stats.lost}</p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-danger-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-danger-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600">Active Posts</p>
-              <p className="text-xl sm:text-2xl font-bold text-primary-600 mt-0.5 sm:mt-1">{stats.active}</p>
-            </div>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Filter className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+        {[
+          { label: 'Total Items', value: stats.total, icon: Package, color: 'primary', gradient: 'from-primary-50 to-blue-50' },
+          { label: 'Found Items', value: stats.found, icon: Search, color: 'success', gradient: 'from-success-50 to-green-50' },
+          { label: 'Lost Items', value: stats.lost, icon: AlertCircle, color: 'danger', gradient: 'from-danger-50 to-red-50' },
+          { label: 'Active Posts', value: stats.active, icon: Filter, color: 'primary', gradient: 'from-blue-50 to-primary-50' },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <Card className={`p-3 sm:p-4 md:p-5 hover:shadow-lg transition-all cursor-pointer bg-gradient-to-br ${stat.gradient} border-0`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] sm:text-xs font-medium text-gray-600 uppercase tracking-wide">{stat.label}</p>
+                  <p className={`text-xl sm:text-2xl md:text-3xl font-bold text-${stat.color}-600 mt-1`}>
+                    {stat.value}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-${stat.color}-100 rounded-xl flex items-center justify-center flex-shrink-0 ring-4 ring-${stat.color}-50`}>
+                  <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-${stat.color}-600`} />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Search and Filters */}
-      <Card className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-white to-gray-50/50 border-2 border-gray-100">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900">Search & Filter</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Input
             placeholder="Search items..."
             value={searchQuery}
@@ -164,8 +166,9 @@ const Home = () => {
             onChange={(e) => setFilterCategory(e.target.value)}
             options={CATEGORIES}
           />
-        </div>
-      </Card>
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Items Grid */}
       {filteredItems.length === 0 ? (
@@ -183,18 +186,18 @@ const Home = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}
             >
-              <Card hover onClick={() => handleItemClick(item.id)} className="overflow-hidden">
+              <Card hover onClick={() => handleItemClick(item.id)} className="overflow-hidden group cursor-pointer border-2 border-transparent hover:border-primary-300">
                 {/* Image */}
-                <div className="relative h-48 bg-gray-200">
+                <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
                   {item.images && item.images.length > 0 ? (
                     <img
                       src={item.images[0]}
                       alt={item.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Package className="w-16 h-16 text-gray-400" />
+                    <div className="w-full h-full flex items-center justify-center bg-white">
+                      <Package className="w-16 h-16 text-gray-300 group-hover:text-primary-400 transition-colors" />
                     </div>
                   )}
                   <div className="absolute top-3 left-3">

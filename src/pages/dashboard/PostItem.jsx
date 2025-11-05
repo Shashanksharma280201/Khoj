@@ -113,15 +113,15 @@ const PostItem = () => {
       >
         {/* Header */}
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            {isEditMode ? 'Edit Item' : 'Post an Item'}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+            {isEditMode ? '✏️ Edit Item' : '📝 Post an Item'}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
             {isEditMode ? 'Update your item details' : 'Help reunite items with their owners'}
           </p>
         </div>
 
-        <Card className="p-4 sm:p-6">
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-white to-gray-50/30 border-2 border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             {error && (
               <div className="bg-danger-50 border border-danger-200 text-danger-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base">
@@ -316,17 +316,23 @@ const PostItem = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6">
               <Button
                 type="button"
                 variant="outline"
                 fullWidth
                 onClick={() => navigate('/')}
+                className="order-2 sm:order-1"
               >
                 Cancel
               </Button>
-              <Button type="submit" fullWidth loading={loading}>
-                {isEditMode ? 'Update Item' : 'Post Item'}
+              <Button
+                type="submit"
+                fullWidth
+                loading={loading}
+                className="order-1 sm:order-2 shadow-lg shadow-primary-200 hover:shadow-xl hover:shadow-primary-300"
+              >
+                {isEditMode ? '✓ Update Item' : '📤 Post Item'}
               </Button>
             </div>
           </form>

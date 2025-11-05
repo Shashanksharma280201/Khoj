@@ -113,10 +113,17 @@ const Signup = () => {
         >
           {/* Logo */}
           <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary-100 rounded-2xl mb-3 sm:mb-4">
-              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Create Account</h1>
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-3 sm:mb-4 shadow-lg shadow-primary-200"
+            >
+              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+            </motion.div>
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+              Join Khoj
+            </h1>
             <p className="text-sm sm:text-base text-gray-600 mt-2">Sign up with your student email</p>
           </div>
 
@@ -198,8 +205,13 @@ const Signup = () => {
               required
             />
 
-            <Button type="submit" fullWidth loading={loading} className="mt-6">
-              Create Account
+            <Button
+              type="submit"
+              fullWidth
+              loading={loading}
+              className="mt-6 shadow-lg shadow-primary-200 hover:shadow-xl hover:shadow-primary-300"
+            >
+              ✨ Create Account
             </Button>
           </form>
 

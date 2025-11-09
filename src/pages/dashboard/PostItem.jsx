@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Upload, MapPin, Calendar, AlertCircle } from 'lucide-react';
-import { createItem, getItemById, updateItem, CATEGORIES } from '../../lib/db';
+import { ItemsAPI } from '../../lib/apiClient';
+import { CATEGORIES } from '../../lib/constants';
 import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
@@ -30,22 +31,27 @@ const PostItem = () => {
 
   // Load item data if in edit mode
   useEffect(() => {
-    if (isEditMode && editId) {
-      const item = getItemById(editId);
-      if (item) {
+    const fetchItem = async () => {
+      if (!(isEditMode && editId)) return;
+      try {
+        const item = await ItemsAPI.getById(editId);
         setFormData({
           type: item.type,
           title: item.title,
           description: item.description,
           category: item.category,
           location: item.location,
-          date: item.date.split('T')[0],
+          date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
           images: item.images || [],
           urgent: item.urgent,
-          contactPreference: item.contactPreference,
+          contactPreference: item.contactPreference || 'both',
         });
+      } catch (err) {
+        console.error('Failed to load item', err);
+        setError('Unable to load the selected item');
       }
-    }
+    };
+    fetchItem();
   }, [isEditMode, editId]);
 
   const handleChange = (e) => {
@@ -88,20 +94,19 @@ const PostItem = () => {
 
     setLoading(true);
 
-    let result;
-    if (isEditMode) {
-      result = updateItem(editId, formData);
-    } else {
-      result = createItem(formData);
-    }
-
-    if (result.success) {
+    try {
+      if (isEditMode) {
+        await ItemsAPI.update(editId, formData);
+      } else {
+        await ItemsAPI.create(formData);
+      }
       navigate('/profile');
-    } else {
-      setError(result.error || `Failed to ${isEditMode ? 'update' : 'post'} item`);
+    } catch (err) {
+      console.error('Save item error', err);
+      setError(err.message || `Failed to ${isEditMode ? 'update' : 'post'} item`);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

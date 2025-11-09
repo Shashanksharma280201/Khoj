@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Plus, User, LogOut, Home, Bell } from 'lucide-react';
+import { Plus, User, LogOut, Home, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Button from '../ui/Button';
+import Badge from '../ui/Badge';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -23,12 +23,27 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 sm:gap-3 group">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary-600 rounded-xl flex items-center justify-center group-hover:bg-primary-700 transition-colors">
-              <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-white shadow-sm flex items-center justify-center">
+              <img
+                src="/Khoj_logo.jpeg"
+                alt="Khoj logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">Khoj</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">{user?.college}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
+                {user?.college && (
+                  <Badge variant="primary" className="hidden sm:inline-flex text-[10px] font-medium">
+                    {user.college}
+                  </Badge>
+                )}
+                {user?.campus && (
+                  <span className="text-[10px] text-primary-600 font-semibold hidden sm:inline">
+                    {user.campus}
+                  </span>
+                )}
+              </div>
             </div>
           </Link>
 
@@ -82,6 +97,11 @@ const Navbar = () => {
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{user?.name}</p>
                 <p className="text-xs text-gray-500 truncate max-w-[150px]">{user?.email}</p>
+                {user?.college && (
+                  <p className="text-xs text-primary-600 font-semibold truncate max-w-[150px]">
+                    {user.college}{user?.campus ? ` • ${user.campus}` : ''}
+                  </p>
+                )}
               </div>
               <button
                 onClick={handleLogout}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Mail, Phone, Building2, Package, Search, Award, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getUserItems, deleteItem } from '../../lib/db';
+import { ItemsAPI } from '../../lib/apiClient';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
@@ -16,15 +16,30 @@ const Profile = () => {
   const [userItems, setUserItems] = useState([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState('');
 
-  const loadUserItems = () => {
-    if (user) {
-      const items = getUserItems(user.id);
+  const loadUserItems = async () => {
+    if (!user) return;
+    setItemsLoading(true);
+    setItemsError('');
+    try {
+      const items = await ItemsAPI.mine();
       setUserItems(items);
+    } catch (error) {
+      console.error('Failed to load user items', error);
+      setItemsError(error.message || 'Unable to load your posts');
+    } finally {
+      setItemsLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!user) {
+      setUserItems([]);
+      setItemsLoading(false);
+      return;
+    }
     loadUserItems();
   }, [user]);
 
@@ -33,12 +48,15 @@ const Profile = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (itemToDelete) {
-      deleteItem(itemToDelete.id);
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    try {
+      await ItemsAPI.remove(itemToDelete._id || itemToDelete.id);
       setDeleteModalOpen(false);
       setItemToDelete(null);
-      loadUserItems(); // Reload items
+      loadUserItems();
+    } catch (error) {
+      console.error('Delete item failed', error);
     }
   };
 
@@ -86,6 +104,18 @@ const Profile = () => {
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                   {user?.name}
                 </h1>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
+                  {user?.college && (
+                    <Badge variant="primary" className="inline-flex items-center justify-center px-3 py-1 text-xs font-semibold text-primary-800 bg-white text-center">
+                      {user.college}
+                    </Badge>
+                  )}
+                  {user?.campus && (
+                    <span className="text-xs font-semibold text-white/90 bg-white/20 rounded-full px-3 py-1">
+                      {user.campus}
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-white/90">
                     <Mail className="w-4 h-4" />
@@ -94,7 +124,10 @@ const Profile = () => {
                   <div className="hidden sm:block w-1 h-1 bg-white/50 rounded-full"></div>
                   <div className="flex items-center justify-center sm:justify-start gap-2 text-white/90">
                     <Building2 className="w-4 h-4" />
-                    <span className="text-sm">{user?.college}</span>
+                    <span className="text-sm">
+                      {user?.college}
+                      {user?.campus ? ` • ${user.campus}` : ''}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-white/80">
@@ -185,7 +218,18 @@ const Profile = () => {
             </div>
           </div>
 
-          {userItems.length === 0 ? (
+          {itemsError && (
+            <div className="mb-4 p-3 rounded-lg border border-danger-200 bg-danger-50 text-danger-700 text-sm">
+              {itemsError}
+            </div>
+          )}
+
+          {itemsLoading ? (
+            <div className="text-center py-16">
+              <div className="w-12 h-12 border-b-2 border-primary-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading your posts...</p>
+            </div>
+          ) : userItems.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Package className="w-10 h-10 text-gray-400" />

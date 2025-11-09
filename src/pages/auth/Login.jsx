@@ -1,26 +1,60 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import { CampusAPI } from '../../lib/apiClient';
 import { motion } from 'framer-motion';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    college: '',
+    campus: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const [colleges, setColleges] = useState([]);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'college' ? { campus: '' } : {}),
+    }));
     setError('');
   };
+
+  useEffect(() => {
+    const fetchColleges = async () => {
+      try {
+        const list = await CampusAPI.list();
+        setColleges(list);
+      } catch (error) {
+        console.error('Failed to load colleges', error);
+      }
+    };
+    fetchColleges();
+  }, []);
+
+  const matchedCollege = useMemo(() => {
+    if (!formData.college) return null;
+    return colleges.find(
+      (college) => college.name.toLowerCase() === formData.college.toLowerCase()
+    );
+  }, [colleges, formData.college]);
+
+  useEffect(() => {
+    if (matchedCollege && matchedCollege.campuses.length === 1 && !formData.campus) {
+      setFormData(prev => ({ ...prev, campus: matchedCollege.campuses[0] }));
+    }
+  }, [matchedCollege, formData.campus]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,8 +67,23 @@ const Login = () => {
       setLoading(false);
       return;
     }
+    if (!formData.college.trim()) {
+      setError('Please enter your college name');
+      setLoading(false);
+      return;
+    }
+    if (matchedCollege && matchedCollege.campuses.length > 1 && !formData.campus.trim()) {
+      setError('Please select your campus');
+      setLoading(false);
+      return;
+    }
 
-    const result = await login(formData.email, formData.password);
+    const result = await login({
+      email: formData.email,
+      password: formData.password,
+      college: formData.college,
+      campus: formData.campus,
+    });
 
     if (result.success) {
       navigate('/');
@@ -61,9 +110,9 @@ const Login = () => {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-3 sm:mb-4 shadow-lg shadow-primary-200"
+              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl mb-3 sm:mb-4 shadow-lg shadow-primary-200 overflow-hidden"
             >
-              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              <img src="/Khoj_logo.jpeg" alt="Khoj logo" className="w-full h-full object-cover" />
             </motion.div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
               Welcome to Khoj
@@ -84,15 +133,63 @@ const Login = () => {
             )}
 
             <Input
-              label="Student Email"
+              label="Campus Email"
               type="email"
               name="email"
-              placeholder="your.email@college.edu"
+              placeholder="name@yourcollege.com"
               value={formData.email}
               onChange={handleChange}
               icon={Mail}
               required
             />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                College/University <span className="text-danger-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="college"
+                list="login-college-options"
+                value={formData.college}
+                onChange={handleChange}
+                placeholder="Start typing your college name"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                required
+              />
+              <datalist id="login-college-options">
+                {colleges.map((college) => (
+                  <option key={college._id || college.name} value={college.name} />
+                ))}
+              </datalist>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Campus {matchedCollege && matchedCollege.campuses.length > 1 && <span className="text-danger-500">*</span>}
+              </label>
+              <input
+                type="text"
+                name="campus"
+                list="login-campus-options"
+                value={formData.campus}
+                onChange={handleChange}
+                placeholder={
+                  matchedCollege && matchedCollege.campuses.length > 0
+                    ? 'Select or type your campus'
+                    : 'Campus (optional)'
+                }
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                required={Boolean(matchedCollege && matchedCollege.campuses.length > 1)}
+              />
+              {matchedCollege && matchedCollege.campuses.length > 0 && (
+                <datalist id="login-campus-options">
+                  {matchedCollege.campuses.map((campus) => (
+                    <option key={campus} value={campus} />
+                  ))}
+                </datalist>
+              )}
+            </div>
 
             <Input
               label="Password"
@@ -126,11 +223,11 @@ const Login = () => {
           </div>
 
           {/* Demo Credentials */}
-          <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          {/* <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs sm:text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-            <p className="text-xs text-blue-700">Email: demo@college.edu</p>
+            <p className="text-xs text-blue-700">Email: demo@student.outlook.com</p>
             <p className="text-xs text-blue-700">Password: demo123</p>
-          </div>
+          </div> */}
         </motion.div>
       </div>
 

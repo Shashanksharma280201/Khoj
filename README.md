@@ -49,25 +49,31 @@ A modern, professional web application for managing lost and found items on coll
 
 ### Installation
 
-1. Navigate to the project directory:
-```bash
-cd lost-and-found
-```
-
-2. Install dependencies:
+#### Frontend
+1. Install dependencies:
 ```bash
 npm install
 ```
-
-3. Start the development server:
+2. Start Vite:
 ```bash
 npm run dev
 ```
+3. Visit `http://localhost:5173`
 
-4. Open your browser and visit:
+#### Backend (new)
+1. Install dependencies:
+```bash
+cd server
+npm install
 ```
-http://localhost:5173
+2. Copy `.env.example` to `.env` and fill in `MONGODB_URI`, `JWT_SECRET`, and `CLIENT_ORIGIN`.
+3. Run the API:
+```bash
+npm run dev
 ```
+4. The frontend expects `VITE_API_URL` (see `.env.example`) to point at `http://localhost:4000/api` by default.
+
+> Tip: run both servers simultaneously with separate terminals (or add a root script using `concurrently` if you prefer).
 
 ## Usage
 

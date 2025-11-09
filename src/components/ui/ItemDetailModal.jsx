@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { X, MapPin, Calendar, Mail, Phone, Package, AlertCircle, User } from 'lucide-react';
+import { X, MapPin, Calendar, Mail, Phone, Package, AlertCircle, User, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Badge from './Badge';
 import Button from './Button';
@@ -161,6 +161,27 @@ const ItemDetailModal = ({ isOpen, onClose, item }) => {
                 </Card>
               </div>
 
+              {item.college && (
+                <Card className="p-4 border-2 border-gray-200 hover:border-primary-300 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                        College & Campus
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {item.college}
+                      </p>
+                      {item.campus && (
+                        <p className="text-xs text-gray-600 mt-1">{item.campus}</p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Status */}
               <Card className="p-4 border-2 border-gray-200">
                 <div className="flex items-center gap-2">
@@ -184,8 +205,11 @@ const ItemDetailModal = ({ isOpen, onClose, item }) => {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900">{item.userName}</p>
-                    {item.college && (
-                      <p className="text-sm text-gray-600">{item.college}</p>
+                    {(item.college || item.campus) && (
+                      <p className="text-sm text-gray-600">
+                        {item.college}
+                        {item.campus ? ` • ${item.campus}` : ''}
+                      </p>
                     )}
                   </div>
                 </div>

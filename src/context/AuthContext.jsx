@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, loginUser, createUser, logoutUser } from '../lib/db';
+import { AuthAPI, setAuthToken } from '../lib/apiClient';
 
 const AuthContext = createContext(null);
 
@@ -8,34 +8,52 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-    setLoading(false);
+    const bootstrap = async () => {
+      const storedToken = localStorage.getItem('khoj_token');
+      if (!storedToken) {
+        setLoading(false);
+        return;
+      }
+
+      setAuthToken(storedToken);
+      try {
+        const profile = await AuthAPI.me();
+        setUser(profile);
+      } catch (error) {
+        console.error('Failed to restore session', error);
+        setAuthToken(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    bootstrap();
   }, []);
 
-  const login = async (email, password) => {
-    const result = loginUser(email, password);
-    if (result.success) {
+  const login = async (credentials) => {
+    try {
+      const result = await AuthAPI.login(credentials);
+      setAuthToken(result.token);
       setUser(result.user);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    return result;
   };
 
   const signup = async (userData) => {
-    const result = createUser(userData);
-    if (result.success) {
+    try {
+      const result = await AuthAPI.signup(userData);
+      setAuthToken(result.token);
       setUser(result.user);
-      // Auto-login after signup
-      localStorage.setItem('lnf_current_user', JSON.stringify(result.user));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    return result;
   };
 
   const logout = () => {
-    logoutUser();
+    setAuthToken(null);
     setUser(null);
   };
 

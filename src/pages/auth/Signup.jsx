@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Phone, Building2, Search } from 'lucide-react';
+import { Mail, Lock, User, Phone, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import { CampusAPI } from '../../lib/apiClient';
 import { motion } from 'framer-motion';
 
 const Signup = () => {
@@ -12,6 +13,7 @@ const Signup = () => {
     email: '',
     phone: '',
     college: '',
+    campus: '',
     password: '',
     confirmPassword: '',
   });
@@ -19,25 +21,59 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
 
   const { signup } = useAuth();
+  const [colleges, setColleges] = useState([]);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'college' ? { campus: '' } : {}),
+    }));
     setError('');
   };
+
+  useEffect(() => {
+    const fetchColleges = async () => {
+      try {
+        const list = await CampusAPI.list();
+        setColleges(list);
+      } catch (error) {
+        console.error('Failed to load colleges', error);
+      }
+    };
+    fetchColleges();
+  }, []);
+
+  const matchedCollege = useMemo(() => {
+    if (!formData.college) return null;
+    return colleges.find(
+      (college) => college.name.toLowerCase() === formData.college.toLowerCase()
+    );
+  }, [colleges, formData.college]);
+
+  useEffect(() => {
+    if (matchedCollege && matchedCollege.campuses.length === 1 && !formData.campus) {
+      setFormData(prev => ({ ...prev, campus: matchedCollege.campuses[0] }));
+    }
+  }, [matchedCollege, formData.campus]);
 
   const validateForm = () => {
     if (!formData.name.trim()) {
       return 'Name is required';
     }
-    if (!formData.email.includes('@') || !formData.email.includes('.edu')) {
-      return 'Please use your college email (.edu domain)';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Please enter a valid college email address';
     }
     if (formData.phone.length < 10) {
       return 'Please enter a valid phone number';
     }
     if (!formData.college.trim()) {
       return 'College name is required';
+    }
+    if (matchedCollege && matchedCollege.campuses.length > 1 && !formData.campus.trim()) {
+      return 'Please select your campus';
     }
     if (formData.password.length < 6) {
       return 'Password must be at least 6 characters';
@@ -71,6 +107,9 @@ const Signup = () => {
 
     setLoading(false);
   };
+
+  const collegeNames = useMemo(() => colleges.map((college) => college.name), [colleges]);
+  const campusSuggestions = matchedCollege?.campuses ?? [];
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -117,14 +156,14 @@ const Signup = () => {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-3 sm:mb-4 shadow-lg shadow-primary-200"
+              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl mb-3 sm:mb-4 shadow-lg shadow-primary-200 overflow-hidden"
             >
-              <Search className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              <img src="/Khoj_logo.jpeg" alt="Khoj logo" className="w-full h-full object-cover" />
             </motion.div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
               Join Khoj
             </h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-2">Sign up with your student email</p>
+            <p className="text-sm sm:text-base text-gray-600 mt-2">Sign up with your campus email</p>
           </div>
 
           {/* Signup Form */}
@@ -151,10 +190,10 @@ const Signup = () => {
             />
 
             <Input
-              label="Student Email"
+              label="Campus Email"
               type="email"
               name="email"
-              placeholder="your.email@college.edu"
+              placeholder="name@yourcollege.com"
               value={formData.email}
               onChange={handleChange}
               icon={Mail}
@@ -172,16 +211,61 @@ const Signup = () => {
               required
             />
 
-            <Input
-              label="College/University"
-              type="text"
-              name="college"
-              placeholder="Sample College"
-              value={formData.college}
-              onChange={handleChange}
-              icon={Building2}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                College/University <span className="text-danger-500">*</span>
+              </label>
+              <div className="relative">
+                <Building2 className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  name="college"
+                  value={formData.college}
+                  onChange={handleChange}
+                  list="college-options"
+                  placeholder="Start typing your college name"
+                  className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                  required
+                />
+                <datalist id="college-options">
+                  {collegeNames.map((college) => (
+                    <option key={college} value={college} />
+                  ))}
+                </datalist>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Suggestions appear as you type. Choose your exact campus below if applicable.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Campus {matchedCollege && matchedCollege.campuses.length > 1 && <span className="text-danger-500">*</span>}
+              </label>
+              <input
+                type="text"
+                name="campus"
+                value={formData.campus}
+                onChange={handleChange}
+                list="campus-options"
+                placeholder={
+                  matchedCollege
+                    ? matchedCollege.campuses.length
+                      ? 'Select or type your campus'
+                      : 'Campus (optional)'
+                    : 'Enter campus name (optional)'
+                }
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                required={Boolean(matchedCollege && matchedCollege.campuses.length > 1)}
+              />
+              {matchedCollege && matchedCollege.campuses.length > 0 && (
+                <datalist id="campus-options">
+                  {campusSuggestions.map((campus) => (
+                    <option key={campus} value={campus} />
+                  ))}
+                </datalist>
+              )}
+            </div>
 
             <Input
               label="Password"

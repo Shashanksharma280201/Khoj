@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, MapPin, Calendar, AlertCircle, Package } from 'lucide-react';
-import { getAllItems, CATEGORIES } from '../../lib/db';
+import { CATEGORIES } from '../../lib/constants';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Input from '../../components/ui/Input';
@@ -10,42 +10,95 @@ import Button from '../../components/ui/Button';
 import ItemDetailModal from '../../components/ui/ItemDetailModal';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+import { ItemsAPI, CampusAPI } from '../../lib/apiClient';
 
 const Home = () => {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterCampus, setFilterCampus] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [collegeEntry, setCollegeEntry] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const allItems = getAllItems();
-    setItems(allItems);
-  }, []);
+    if (!user?.college) return;
+    const fetchCollegeDirectory = async () => {
+      try {
+        const directory = await CampusAPI.list();
+        const entry = directory.find((college) => college.name === user.college);
+        setCollegeEntry(entry || null);
+      } catch (err) {
+        console.error('Failed to load campus directory', err);
+      }
+    };
+    fetchCollegeDirectory();
+  }, [user?.college]);
 
-  // Memoized filtered items - recalculates whenever dependencies change
+  useEffect(() => {
+    if (!user?.college) {
+      setItems([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchItems = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const data = await ItemsAPI.list({
+          type: filterType || undefined,
+          category: filterCategory || undefined,
+          status: filterStatus || undefined,
+          campus: filterCampus || undefined,
+          search: searchQuery || undefined,
+        });
+        setItems(data);
+      } catch (err) {
+        console.error('Failed to fetch items', err);
+        setError(err.message || 'Unable to fetch items');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, [user?.college, filterType, filterCategory, filterStatus, filterCampus, searchQuery]);
+
+  const categoryOptions = useMemo(
+    () => CATEGORIES.map(cat => ({
+      value: cat,
+      label: cat
+    })),
+    []
+  );
+
+  const campusOptions = useMemo(() => {
+    const campusSet = new Set();
+    items.forEach(item => {
+      if (item.campus) {
+        campusSet.add(item.campus);
+      }
+    });
+    if (user?.campus) {
+      campusSet.add(user.campus);
+    }
+    collegeEntry?.campuses?.forEach(campus => campusSet.add(campus));
+    return Array.from(campusSet)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+      .map(campus => ({ value: campus, label: campus }));
+  }, [items, collegeEntry, user?.campus]);
+
   const filteredItems = useMemo(() => {
     let filtered = [...items];
-
-    // Apply type filter
-    if (filterType) {
-      filtered = filtered.filter(item => item.type === filterType);
-    }
-
-    // Apply category filter
-    if (filterCategory) {
-      filtered = filtered.filter(item => item.category === filterCategory);
-    }
-
-    // Apply status filter
-    if (filterStatus) {
-      filtered = filtered.filter(item => item.status === filterStatus);
-    }
-
-    // Apply search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(item =>
@@ -55,9 +108,8 @@ const Home = () => {
         item.category.toLowerCase().includes(query)
       );
     }
-
     return filtered;
-  }, [items, searchQuery, filterType, filterCategory, filterStatus]);
+  }, [items, searchQuery]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -74,22 +126,59 @@ const Home = () => {
     setFilterType('');
     setFilterCategory('');
     setFilterStatus('');
+    setFilterCampus('');
   };
 
-  const hasActiveFilters = searchQuery || filterType || filterCategory || filterStatus;
+  const hasActiveFilters = Boolean(
+    searchQuery ||
+    filterType ||
+    filterCategory ||
+    filterStatus ||
+    filterCampus
+  );
 
-  // Format categories for Select component
-  const categoryOptions = CATEGORIES.map(cat => ({
-    value: cat,
-    label: cat
-  }));
+  const campusLabel = filterCampus
+    ? `${user?.college || 'Your College'} • ${filterCampus}`
+    : user?.college || 'Your College';
+  const campusDescription = filterCampus ? 'Viewing selected campus' : 'All campuses in your college';
 
-  const stats = {
-    total: items.length,
-    found: items.filter(i => i.type === 'found').length,
-    lost: items.filter(i => i.type === 'lost').length,
-    active: items.filter(i => i.status === 'active').length,
-  };
+  const totalActive = items.filter(item => item.status === 'active').length;
+  const campusActive = filteredItems.filter(item => item.status === 'active').length;
+  const foundCount = items.filter(item => item.type === 'found').length;
+  const lostCount = items.filter(item => item.type === 'lost').length;
+
+  const stats = [
+    {
+      label: 'College Items',
+      value: items.length,
+      icon: Package,
+      color: 'primary',
+      gradient: 'from-primary-50 to-blue-50',
+      subtitle: `${totalActive} active posts`,
+    },
+    {
+      label: filterCampus ? filterCampus : 'All Campuses',
+      value: filteredItems.length,
+      icon: MapPin,
+      color: 'warning',
+      gradient: 'from-warning-50 to-yellow-50',
+      subtitle: `${campusActive} active on campus`,
+    },
+    {
+      label: 'Found Items',
+      value: foundCount,
+      icon: Search,
+      color: 'success',
+      gradient: 'from-success-50 to-green-50',
+    },
+    {
+      label: 'Lost Items',
+      value: lostCount,
+      icon: AlertCircle,
+      color: 'danger',
+      gradient: 'from-danger-50 to-red-50',
+    },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-5 md:space-y-6 pb-20 md:pb-6">
@@ -107,6 +196,14 @@ const Home = () => {
             <span className="hidden sm:inline">🔍</span>
             Browse and search for items in your campus
           </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <Badge variant="primary" className="text-xs sm:text-sm">
+              {campusLabel}
+            </Badge>
+            <span className="text-xs text-gray-500">
+              {campusDescription}
+            </span>
+          </div>
         </div>
         <Button
           onClick={() => navigate('/post')}
@@ -120,14 +217,9 @@ const Home = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
-        {[
-          { label: 'Total Items', value: stats.total, icon: Package, color: 'primary', gradient: 'from-primary-50 to-blue-50' },
-          { label: 'Found Items', value: stats.found, icon: Search, color: 'success', gradient: 'from-success-50 to-green-50' },
-          { label: 'Lost Items', value: stats.lost, icon: AlertCircle, color: 'danger', gradient: 'from-danger-50 to-red-50' },
-          { label: 'Active Posts', value: stats.active, icon: Filter, color: 'primary', gradient: 'from-blue-50 to-primary-50' },
-        ].map((stat, index) => (
+        {stats.map((stat, index) => (
           <motion.div
-            key={stat.label}
+            key={`${stat.label}-${index}`}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.1 }}
@@ -139,6 +231,9 @@ const Home = () => {
                   <p className={`text-xl sm:text-2xl md:text-3xl font-bold text-${stat.color}-600 mt-1`}>
                     {stat.value}
                   </p>
+                  {stat.subtitle && (
+                    <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stat.subtitle}</p>
+                  )}
                 </div>
                 <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-${stat.color}-100 rounded-xl flex items-center justify-center flex-shrink-0 ring-4 ring-${stat.color}-50`}>
                   <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-${stat.color}-600`} />
@@ -197,6 +292,26 @@ const Home = () => {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-3">
+            <Select
+              placeholder="All Status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'resolved', label: 'Resolved' },
+              ]}
+            />
+
+            <Select
+              placeholder="All Campuses"
+              value={filterCampus}
+              onChange={(e) => setFilterCampus(e.target.value)}
+              options={campusOptions}
+              className="lg:col-span-2"
+            />
+          </div>
+
           {/* Show active filter count */}
           {hasActiveFilters && (
             <div className="mt-3 pt-3 border-t border-gray-200">
@@ -209,7 +324,18 @@ const Home = () => {
       </motion.div>
 
       {/* Items Grid */}
-      {filteredItems.length === 0 ? (
+      {error && (
+        <Card className="p-4 border border-danger-200 bg-danger-50 text-danger-700">
+          {error}
+        </Card>
+      )}
+
+      {isLoading ? (
+        <Card className="p-8 sm:p-12 text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-600">Loading campus posts...</p>
+        </Card>
+      ) : filteredItems.length === 0 ? (
         <Card className="p-8 sm:p-12 text-center">
           <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No items found</h3>
@@ -252,8 +378,14 @@ const Home = () => {
 
                 {/* Content */}
                 <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
+                      <p className="text-xs font-semibold text-primary-600 mt-0.5 line-clamp-1">
+                        {item.college}
+                        {item.campus ? ` • ${item.campus}` : ''}
+                      </p>
+                    </div>
                     <Badge variant="default">{item.category}</Badge>
                   </div>
 

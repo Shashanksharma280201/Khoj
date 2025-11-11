@@ -65,3 +65,35 @@ export const ItemsAPI = {
 export const CampusAPI = {
   list: () => apiRequest('/campuses', { auth: false }),
 };
+
+export const UploadAPI = {
+  uploadImages: async (files) => {
+    const formData = new FormData();
+
+    // Append each file to FormData
+    Array.from(files).forEach(file => {
+      formData.append('images', file);
+    });
+
+    const headers = {};
+    if (authToken) {
+      headers.Authorization = `Bearer ${authToken}`;
+    }
+    // Don't set Content-Type - browser will set it with boundary for multipart/form-data
+
+    const response = await fetch(`${API_BASE_URL}/upload/images`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const error = new Error(errorBody.message || 'Upload failed');
+      error.status = response.status;
+      throw error;
+    }
+
+    return response.json();
+  },
+};

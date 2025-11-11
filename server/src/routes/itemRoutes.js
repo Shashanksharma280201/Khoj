@@ -17,17 +17,22 @@ router.get('/', async (req, res) => {
     if (category) filters.category = category;
     if (status) filters.status = status;
     if (campus) filters.campus = campus;
-    if (search) {
-      const regex = new RegExp(search, 'i');
-      filters.$or = [
-        { title: regex },
-        { description: regex },
-        { location: regex },
-        { category: regex },
-      ];
+
+    // Use MongoDB text search for better performance
+    if (search && search.trim()) {
+      filters.$text = { $search: search.trim() };
     }
 
-    const items = await Item.find(filters).sort({ createdAt: -1 }).limit(200);
+    const query = Item.find(filters);
+
+    // Sort by text score if searching, otherwise by creation date
+    if (search && search.trim()) {
+      query.sort({ score: { $meta: 'textScore' }, createdAt: -1 });
+    } else {
+      query.sort({ createdAt: -1 });
+    }
+
+    const items = await query.limit(200).lean();
     res.json(items);
   } catch (error) {
     console.error('Get items error', error);
@@ -37,7 +42,9 @@ router.get('/', async (req, res) => {
 
 router.get('/mine', async (req, res) => {
   try {
-    const items = await Item.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const items = await Item.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(items);
   } catch (error) {
     console.error('Get user items error', error);
@@ -61,7 +68,13 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Create item error', error);
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: error.errors[0]?.message });
+      const firstError = error.errors[0];
+      const field = firstError.path.join('.');
+      return res.status(400).json({
+        message: `${field}: ${firstError.message}`,
+        field,
+        errors: error.errors
+      });
     }
     res.status(500).json({ message: 'Failed to create item' });
   }
@@ -93,7 +106,13 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     console.error('Update item error', error);
     if (error.name === 'ZodError') {
-      return res.status(400).json({ message: error.errors[0]?.message });
+      const firstError = error.errors[0];
+      const field = firstError.path.join('.');
+      return res.status(400).json({
+        message: `${field}: ${firstError.message}`,
+        field,
+        errors: error.errors
+      });
     }
     res.status(500).json({ message: 'Failed to update item' });
   }

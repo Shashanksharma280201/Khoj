@@ -58,7 +58,7 @@ const Home = () => {
           category: filterCategory || undefined,
           status: filterStatus || undefined,
           campus: filterCampus || undefined,
-          search: searchQuery || undefined,
+          search: searchQuery.trim() || undefined,
         });
         setItems(data);
       } catch (err) {
@@ -69,7 +69,14 @@ const Home = () => {
       }
     };
 
-    fetchItems();
+    // Only debounce when user is typing in search
+    // Otherwise fetch immediately (on mount, filter change, etc.)
+    if (searchQuery) {
+      const timeoutId = setTimeout(fetchItems, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      fetchItems();
+    }
   }, [user?.college, filterType, filterCategory, filterStatus, filterCampus, searchQuery]);
 
   const categoryOptions = useMemo(
@@ -97,19 +104,8 @@ const Home = () => {
       .map(campus => ({ value: campus, label: campus }));
   }, [items, collegeEntry, user?.campus]);
 
-  const filteredItems = useMemo(() => {
-    let filtered = [...items];
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.description.toLowerCase().includes(query) ||
-        item.location.toLowerCase().includes(query) ||
-        item.category.toLowerCase().includes(query)
-      );
-    }
-    return filtered;
-  }, [items, searchQuery]);
+  // Items are already filtered by the API, no need for client-side filtering
+  const filteredItems = items;
 
   const handleItemClick = (item) => {
     setSelectedItem(item);

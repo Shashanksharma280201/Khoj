@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Upload, MapPin, Calendar, AlertCircle } from 'lucide-react';
+import { Upload, MapPin, CalendarDays, AlertCircle } from 'lucide-react';
 import { ItemsAPI } from '../../lib/apiClient';
 import { CATEGORIES } from '../../lib/constants';
 import Card from '../../components/ui/Card';

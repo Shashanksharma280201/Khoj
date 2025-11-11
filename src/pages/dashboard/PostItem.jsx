@@ -245,7 +245,7 @@ const PostItem = () => {
               name="date"
               value={formData.date}
               onChange={handleChange}
-              icon={Calendar}
+              icon={CalendarDays}
               required
               max={new Date().toISOString().split('T')[0]}
             />

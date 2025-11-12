@@ -8,42 +8,14 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Debug line (optional)
-router.post('/test', upload.array('images', 5), (req, res) => {
-  console.log("Files received:", req.files);
-  res.json({ received: req.files });
-});
-
-router.get('/', async (req, res) => {
-  try {
-    const { type, category, status, campus, search } = req.query;
-    const filters = { college: req.user.college };
-    if (type) filters.type = type;
-    if (category) filters.category = category;
-    if (status) filters.status = status;
-    if (campus) filters.campus = campus;
-    if (search) {
-      const regex = new RegExp(search, 'i');
-      filters.$or = [
-        { title: regex },
-        { description: regex },
-        { location: regex },
-        { category: regex },
-      ];
-    }
-    const items = await Item.find(filters).sort({ createdAt: -1 }).limit(200);
-    res.json(items);
-  } catch (error) {
-    console.error('Get items error', error);
-    res.status(500).json({ message: 'Failed to fetch items' });
-  }
-});
-
 router.post('/', upload.array('images', 5), async (req, res) => {
   try {
     console.log("Files received:", req.files);
+
     const payload = itemSchema.parse(req.body);
-    const imageUrls = req.files ? req.files.map(f => f.path) : [];
+
+    // ✅ Correct way: multer-storage-cloudinary returns `file.path` or `file.url`
+    const imageUrls = req.files?.map(f => f.path || f.url) || [];
 
     const item = await Item.create({
       ...payload,
@@ -56,7 +28,9 @@ router.post('/', upload.array('images', 5), async (req, res) => {
       campus: payload.campus || req.user.campus,
     });
 
+    console.log("Item created successfully:", item);
     res.status(201).json(item);
+
   } catch (error) {
     console.error('Create item error', error);
     if (error.name === 'ZodError') {

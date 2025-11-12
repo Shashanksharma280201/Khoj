@@ -33,6 +33,18 @@ router.get('/', async (req, res) => {
     }
 
     const items = await query.limit(200).lean();
+
+    // Debug logging - remove after fixing
+    console.log('Total items fetched:', items.length);
+    const sampleWithImage = items.find(i => i.images && i.images.length > 0);
+    if (sampleWithImage) {
+      console.log('Sample item with images:', {
+        id: sampleWithImage._id,
+        title: sampleWithImage.title,
+        images: sampleWithImage.images,
+      });
+    }
+
     res.json(items);
   } catch (error) {
     console.error('Get items error', error);

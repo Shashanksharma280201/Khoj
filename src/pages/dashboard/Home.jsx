@@ -60,6 +60,14 @@ const Home = () => {
           campus: filterCampus || undefined,
           search: searchQuery.trim() || undefined,
         });
+
+        // Debug logging - check if images are in the response
+        const itemsWithImages = data.filter(item => item.images && item.images.length > 0);
+        if (itemsWithImages.length > 0) {
+          console.log('Items with images received:', itemsWithImages.length);
+          console.log('Sample item:', itemsWithImages[0]);
+        }
+
         setItems(data);
       } catch (err) {
         console.error('Failed to fetch items', err);
@@ -354,8 +362,27 @@ const Home = () => {
                       src={item.images[0]}
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        console.error('Image failed to load:', {
+                          url: item.images[0],
+                          itemId: item.id,
+                          itemTitle: item.title,
+                        });
+                        // Hide broken image and show placeholder instead
+                        e.target.style.display = 'none';
+                        const placeholder = e.target.parentElement.querySelector('.image-placeholder');
+                        if (placeholder) placeholder.style.display = 'flex';
+                      }}
                     />
-                  ) : (
+                  ) : null}
+                  {/* Placeholder for broken images */}
+                  {item.images && item.images.length > 0 && (
+                    <div className="image-placeholder w-full h-full flex items-center justify-center bg-white" style={{ display: 'none' }}>
+                      <Package className="w-16 h-16 text-gray-300 group-hover:text-primary-400 transition-colors" />
+                    </div>
+                  )}
+                  {/* Placeholder for items without images */}
+                  {(!item.images || item.images.length === 0) && (
                     <div className="w-full h-full flex items-center justify-center bg-white">
                       <Package className="w-16 h-16 text-gray-300 group-hover:text-primary-400 transition-colors" />
                     </div>

@@ -1,9 +1,13 @@
 const express = require('express');
+const fs = require('fs');
+const multer = require('multer');
+const cloudinary = require('../utils/cloudinary');
 const Item = require('../models/Item');
 const { itemSchema } = require('../utils/validators');
 const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
+const upload = multer({ dest: 'uploads/' }); // Temporary storage
 
 router.use(authMiddleware);
 
@@ -35,6 +39,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get items created by the current user
 router.get('/mine', async (req, res) => {
   try {
     const items = await Item.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -45,9 +50,23 @@ router.get('/mine', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+// ✅ Create new item with Cloudinary image upload
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     const payload = itemSchema.parse(req.body);
+
+    // Upload image to Cloudinary (if present)
+    let imageUrl = '';
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'khoj-items',
+      });
+      imageUrl = result.secure_url;
+
+      // Remove temp file after upload
+      fs.unlinkSync(req.file.path);
+    }
+
     const item = await Item.create({
       ...payload,
       user: req.user._id,
@@ -56,7 +75,9 @@ router.post('/', async (req, res) => {
       userPhone: req.user.phone,
       college: req.user.college,
       campus: payload.campus || req.user.campus,
+      images: imageUrl ? [imageUrl] : [],
     });
+
     res.status(201).json(item);
   } catch (error) {
     console.error('Create item error', error);
@@ -67,6 +88,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get specific item by ID
 router.get('/:id', async (req, res) => {
   try {
     const item = await Item.findOne({ _id: req.params.id, user: req.user._id });
@@ -80,6 +102,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Update item
 router.put('/:id', async (req, res) => {
   try {
     const payload = itemSchema.partial().parse(req.body);
@@ -99,6 +122,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// Delete item
 router.delete('/:id', async (req, res) => {
   try {
     const item = await Item.findOne({ _id: req.params.id, user: req.user._id });

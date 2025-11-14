@@ -163,6 +163,9 @@ const Signup = () => {
             <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
               Join Khoj
             </h1>
+            <p className="text-xs sm:text-sm font-semibold text-primary-600 tracking-wide mt-1">
+              DON'T PANIC. POST IT.
+            </p>
             <p className="text-sm sm:text-base text-gray-600 mt-2">Sign up with your campus email</p>
           </div>
 

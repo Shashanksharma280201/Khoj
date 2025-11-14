@@ -31,7 +31,12 @@ const Navbar = () => {
               />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900">Khoj</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900">Khoj</h1>
+                <span className="text-[9px] sm:text-[10px] font-semibold text-primary-600 tracking-wide hidden sm:inline">
+                  DON'T PANIC. POST IT.
+                </span>
+              </div>
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
                 {user?.college && (
                   <Badge variant="primary" className="hidden sm:inline-flex text-[10px] font-medium">
